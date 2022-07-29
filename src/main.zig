@@ -5,7 +5,6 @@ const os = std.os;
 const mem = std.mem;
 const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
-
 // const libc = @cImport(@cInclude("stdio.h"));
 
 const OpFn = fn (u8) anyerror!void;
@@ -16,8 +15,6 @@ var pc: usize = 0;
 var ribbon = mem.zeroes([65536]u8);
 var stack: std.ArrayList(usize) = undefined;
 var disabled = false;
-
-//var j = [_]fn (u8) anyerror!void  {opNoop} ** 256;
 
 fn initJumpTable() anyerror!void {
     comptime {
@@ -52,12 +49,14 @@ pub fn main() anyerror!void {
     const args = proc_args[1..];
 
     if (args.len == 0) {
-        std.debug.print("$0 <file.bf> -- {s}-{s}-{s} ({s})\n", .{
-            @tagName(builtin.cpu.arch),
-            @tagName(builtin.os.tag),
-            @tagName(builtin.abi),
-            @tagName(builtin.zig_backend),
+        // zig fmt: off
+        std.debug.print("$0 <file.bf> -- ({s}-{s}-{s} [{s}])\n", .{ 
+            @tagName(builtin.cpu.arch), 
+            @tagName(builtin.os.tag), 
+            @tagName(builtin.abi), 
+            if (@hasDecl(builtin, "zig_backend")) @tagName(builtin.zig_backend) else "stage unknown"
         });
+        // zig fmt: on
         os.exit(0);
     }
 
@@ -73,16 +72,14 @@ pub fn main() anyerror!void {
 
     while (true) {
         var c = content[pc];
+        pc += 1;
         if (disabled) {
             if (c == ']') {
-                try stdout.print("\n j enable\n", .{});
                 disabled = false;
             }
-            pc += 1;
             continue;
         }
         try jumpTable[c](c);
-        pc += 1;
         if (pc >= content.len) {
             break;
         }
