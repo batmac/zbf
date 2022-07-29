@@ -1,3 +1,5 @@
+// don't use me, I don't work
+
 const builtin = @import("builtin");
 const std = @import("std");
 const fs = std.fs;
@@ -6,7 +8,7 @@ const mem = std.mem;
 const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
 // const libc = @cImport(@cInclude("stdio.h"));
-const stk = @import("verybasicstack.zig");
+const stk = @import("stack.zig");
 
 const OpFn = fn (u8) anyerror!void;
 
@@ -14,8 +16,9 @@ var jumpTable = [_]OpFn{opNoop} ** 256;
 var ptr: u16 = 0;
 var pc: usize = 0;
 var ribbon = mem.zeroes([30000]u8);
-var stack = stk.Stack.init();
+var stack = stk.Stack(usize, 1024).init();
 var disabled = false;
+var depth: usize = 0;
 
 fn initJumpTable() anyerror!void {
     comptime {
@@ -56,7 +59,7 @@ pub fn main() anyerror!void {
     var f = try fs.cwd().openFile(fname, fs.File.OpenFlags{ .mode = .read_only });
     defer f.close();
 
-     try initJumpTable();
+    try initJumpTable();
 
     const content = try f.readToEndAlloc(gpa, 1024 * 1024);
     defer gpa.free(content);
@@ -65,12 +68,19 @@ pub fn main() anyerror!void {
         // try stdout.print("{d}\n", .{stack.items.len});
         // std.time.sleep(1000000000);
         var c = content[pc];
-        log("pc={d} {c}\n", .{ pc, c });
+        //og("pc={d} {c}\n", .{ pc, c });
 
         pc += 1;
         if (disabled) {
-            if (c == ']') {
-                disabled = false;
+            if (c == '[') {
+                depth += 1;
+            } else if (c == ']') {
+                if (depth == 0) {
+                    log("\n je enable\n", .{});
+                    disabled = false;
+                } else {
+                    depth -= 1;
+                }
             }
             continue;
         }
@@ -121,7 +131,7 @@ fn opPtrMinus(_: u8) anyerror!void {
     ptr = ptr % 30000;
 }
 fn opPutChar(_: u8) anyerror!void {
-    log("opPutChar {x}\n", .{ribbon[ptr]});
+    log("opPutChar 0x{x}\n", .{ribbon[ptr]});
 
     try stdout.print("{c}", .{ribbon[ptr]});
 }
@@ -141,24 +151,26 @@ fn opPush(_: u8) anyerror!void {
         log("\n je disable\n", .{});
         disabled = true;
     } else {
-        log("\n je stack {d}\n", .{pc - 1});
         stack.push(pc - 1);
+        log("\n je stack {d} ({d})\n", .{ pc - 1, stack.len() });
+        //stack.dump();
     }
 }
 
 fn opPop(_: u8) anyerror!void {
     if (ribbon[ptr] != 0) {
-        pc = stack.pop();
-        log("\n j ai pop {d}\n", .{pc});
+        var p = stack.pop();
+        pc = p;
+        log("\n j ai pop {d} ({d})\n", .{ pc, stack.len() });
     }
 }
 
-fn log(comptime format: []const u8, args: anytype) void {
-    // stdout.print(format, args) catch unreachable;
+inline fn log(comptime format: []const u8, args: anytype) void {
+    //stdout.print(format, args) catch unreachable;
     _ = format;
     _ = args;
 }
 
-test "simple" {
+test "recurse" {
     std.testing.refAllDecls(@This());
 }
