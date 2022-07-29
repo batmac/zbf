@@ -10,7 +10,7 @@ const stdout = std.io.getStdOut().writer();
 const OpFn = fn (u8) anyerror!void;
 
 var jumpTable = [_]OpFn{opNoop} ** 256;
-var ptr: usize = 0;
+var ptr: u16 = 0;
 var pc: usize = 0;
 var ribbon = mem.zeroes([65536]u8);
 var stack: std.ArrayList(usize) = undefined;
@@ -40,6 +40,7 @@ fn deinitJumpTable() void {
 }
 
 pub fn main() anyerror!void {
+    // try stdout.print("{s}\n", .{@typeName(@TypeOf(ribbon))});
     // const gpa = std.heap.c_allocator;
     var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!general_purpose_allocator.deinit());
@@ -71,6 +72,7 @@ pub fn main() anyerror!void {
     defer gpa.free(content);
 
     while (true) {
+        // try stdout.print("{d}\n", .{stack.items.len});
         var c = content[pc];
         pc += 1;
         if (disabled) {
@@ -108,16 +110,16 @@ fn opNotImplemented(_: u8) anyerror!void {
 }
 
 fn opPlus(_: u8) anyerror!void {
-    ribbon[ptr] += 1;
+    ribbon[ptr] +%= 1;
 }
 fn opMinus(_: u8) anyerror!void {
-    ribbon[ptr] -= 1;
+    ribbon[ptr] -%= 1;
 }
 fn opPtrPlus(_: u8) anyerror!void {
-    ptr += 1;
+    ptr +%= 1;
 }
 fn opPtrMinus(_: u8) anyerror!void {
-    ptr -= 1;
+    ptr -%= 1;
 }
 fn opPutChar(_: u8) anyerror!void {
     try stdout.print("{c}", .{ribbon[ptr]});
@@ -144,9 +146,8 @@ fn opPush(_: u8) anyerror!void {
 }
 
 fn opPop(_: u8) anyerror!void {
-    var p = stack.pop();
     //// try stdout.print("\n j ai pop {d}\n", .{p});
     if (ribbon[ptr] != 0) {
-        pc = p;
+        pc = stack.pop();
     }
 }
