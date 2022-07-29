@@ -6,25 +6,19 @@ const mem = std.mem;
 const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
 // const libc = @cImport(@cInclude("stdio.h"));
+const stk = @import("verybasicstack.zig");
 
 const OpFn = fn (u8) anyerror!void;
 
 var jumpTable = [_]OpFn{opNoop} ** 256;
 var ptr: u16 = 0;
 var pc: usize = 0;
-var ribbon = mem.zeroes([65536]u8);
-var stack: std.ArrayList(usize) = undefined;
+var ribbon = mem.zeroes([30000]u8);
+var stack = stk.Stack.init();
 var disabled = false;
 
 fn initJumpTable() anyerror!void {
     comptime {
-        // var buf= mem.zeroes([100]u8);
-        // var fba = std.heap.FixedBufferAllocator.init(buf[0..]);
-        // const fba_allocator = fba.allocator();
-        const c_allocator = std.heap.c_allocator;
-        //var log_allocator = std.heap.LoggingAllocator(std.log.Level.debug,std.log.Level.err){.parent_allocator = c_allocator};
-        //const allocator = log_allocator.allocator();
-        stack = std.ArrayList(usize).init(c_allocator);
         jumpTable['<'] = opPtrMinus;
         jumpTable['>'] = opPtrPlus;
         jumpTable['['] = opPush;
@@ -34,9 +28,6 @@ fn initJumpTable() anyerror!void {
         jumpTable[','] = opGetChar;
         jumpTable['.'] = opPutChar;
     }
-}
-fn deinitJumpTable() void {
-    stack.deinit();
 }
 
 pub fn main() anyerror!void {
@@ -65,15 +56,17 @@ pub fn main() anyerror!void {
     var f = try fs.cwd().openFile(fname, fs.File.OpenFlags{ .mode = .read_only });
     defer f.close();
 
-    try initJumpTable();
-    defer deinitJumpTable();
+     try initJumpTable();
 
     const content = try f.readToEndAlloc(gpa, 1024 * 1024);
     defer gpa.free(content);
 
     while (true) {
         // try stdout.print("{d}\n", .{stack.items.len});
+        // std.time.sleep(1000000000);
         var c = content[pc];
+        log("pc={d} {c}\n", .{ pc, c });
+
         pc += 1;
         if (disabled) {
             if (c == ']') {
@@ -110,18 +103,26 @@ fn opNotImplemented(_: u8) anyerror!void {
 }
 
 fn opPlus(_: u8) anyerror!void {
+    log("opPlus ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     ribbon[ptr] +%= 1;
 }
 fn opMinus(_: u8) anyerror!void {
+    log("opMinus ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     ribbon[ptr] -%= 1;
 }
 fn opPtrPlus(_: u8) anyerror!void {
+    log("opPtrPlus ptr={d}\n", .{ptr});
     ptr +%= 1;
+    ptr = ptr % 30000;
 }
 fn opPtrMinus(_: u8) anyerror!void {
+    log("opPtrMinus ptr={d}\n", .{ptr});
     ptr -%= 1;
+    ptr = ptr % 30000;
 }
 fn opPutChar(_: u8) anyerror!void {
+    log("opPutChar {x}\n", .{ribbon[ptr]});
+
     try stdout.print("{c}", .{ribbon[ptr]});
 }
 fn opGetChar(_: u8) anyerror!void {
@@ -137,17 +138,27 @@ fn opGetChar(_: u8) anyerror!void {
 
 fn opPush(_: u8) anyerror!void {
     if (ribbon[ptr] == 0) {
-        //// try stdout.print("\n je disable\n", .{});
+        log("\n je disable\n", .{});
         disabled = true;
     } else {
-        //// try stdout.print("\n je stack {d}\n", .{ic-1});
-        try stack.append(pc - 1);
+        log("\n je stack {d}\n", .{pc - 1});
+        stack.push(pc - 1);
     }
 }
 
 fn opPop(_: u8) anyerror!void {
-    //// try stdout.print("\n j ai pop {d}\n", .{p});
     if (ribbon[ptr] != 0) {
         pc = stack.pop();
+        log("\n j ai pop {d}\n", .{pc});
     }
+}
+
+fn log(comptime format: []const u8, args: anytype) void {
+    // stdout.print(format, args) catch unreachable;
+    _ = format;
+    _ = args;
+}
+
+test "simple" {
+    std.testing.refAllDecls(@This());
 }
