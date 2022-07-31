@@ -12,7 +12,18 @@ const stk = @import("stack.zig");
 
 const OpFn = fn (u8) anyerror!void;
 
-var jumpTable = [_]OpFn{opNoop} ** 256;
+var jumpTable = init: {
+    var initial_value = [_]OpFn{opNoop} ** 256;
+    initial_value['<'] = opPtrMinus;
+    initial_value['>'] = opPtrPlus;
+    initial_value['['] = opPush;
+    initial_value[']'] = opPop;
+    initial_value['+'] = opPlus;
+    initial_value['-'] = opMinus;
+    initial_value[','] = opGetChar;
+    initial_value['.'] = opPutChar;
+    break :init initial_value;
+};
 var ptr: u16 = 0;
 var pc: usize = 0;
 var ribbon = mem.zeroes([30000]u8);
@@ -20,18 +31,6 @@ var stack = stk.Stack(usize, 1024).init();
 var disabled = false;
 var depth: usize = 0;
 
-fn initJumpTable() anyerror!void {
-    comptime {
-        jumpTable['<'] = opPtrMinus;
-        jumpTable['>'] = opPtrPlus;
-        jumpTable['['] = opPush;
-        jumpTable[']'] = opPop;
-        jumpTable['+'] = opPlus;
-        jumpTable['-'] = opMinus;
-        jumpTable[','] = opGetChar;
-        jumpTable['.'] = opPutChar;
-    }
-}
 
 pub fn main() anyerror!void {
     // try stdout.print("{s}\n", .{@typeName(@TypeOf(ribbon))});
@@ -58,8 +57,6 @@ pub fn main() anyerror!void {
     const fname = args[0];
     var f = try fs.cwd().openFile(fname, fs.File.OpenFlags{ .mode = .read_only });
     defer f.close();
-
-    try initJumpTable();
 
     const content = try f.readToEndAlloc(gpa, 1024 * 1024);
     defer gpa.free(content);

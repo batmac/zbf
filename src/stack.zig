@@ -1,11 +1,11 @@
 const std = @import("std");
+const testing = std.testing;
 
 // comptime stack implementation, no allocator.
 
 pub fn Stack(comptime T: type, comptime capacity: usize) type {
     return struct {
         const Self = @This();
-        capacity: usize = capacity,
         sp: usize = 0,
         items: [capacity]T = std.mem.zeroes([capacity]T),
 
@@ -20,7 +20,7 @@ pub fn Stack(comptime T: type, comptime capacity: usize) type {
         }
 
         pub inline fn push(self: *Self, x: T) void {
-            if (self.sp > self.capacity) {
+            if (self.sp > capacity) {
                 @panic("pushing in a full stack");
             }
             self.items[self.sp] = x;
@@ -29,7 +29,6 @@ pub fn Stack(comptime T: type, comptime capacity: usize) type {
 
         pub inline fn pop(self: *Self) T {
             if (self.sp <= 0) {
-
                 @panic("popping an empty stack");
             }
             self.sp -= 1;
