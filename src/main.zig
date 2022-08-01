@@ -1,5 +1,3 @@
-// don't use me, I don't work
-
 const builtin = @import("builtin");
 const std = @import("std");
 const fs = std.fs;
@@ -12,7 +10,7 @@ const stk = @import("stack.zig");
 
 const OpFn = fn (u8) anyerror!void;
 
-var jumpTable = init: {
+const jumpTable = init: {
     var initial_value = [_]OpFn{opNoop} ** 256;
     initial_value['<'] = opPtrMinus;
     initial_value['>'] = opPtrPlus;
@@ -31,7 +29,6 @@ var stack = stk.Stack(usize, 1024).init();
 var disabled = false;
 var depth: usize = 0;
 
-
 pub fn main() anyerror!void {
     // try stdout.print("{s}\n", .{@typeName(@TypeOf(ribbon))});
     // const gpa = std.heap.c_allocator;
@@ -45,10 +42,10 @@ pub fn main() anyerror!void {
     if (args.len == 0) {
         // zig fmt: off
         std.debug.print("$0 <file.bf> -- ({s}-{s}-{s} [{s}])\n", .{ 
-            @tagName(builtin.cpu.arch), 
-            @tagName(builtin.os.tag), 
-            @tagName(builtin.abi), 
-            if (@hasDecl(builtin, "zig_backend")) @tagName(builtin.zig_backend) else "stage unknown"
+            @tagName(builtin.cpu.arch),
+            @tagName(builtin.os.tag),
+            @tagName(builtin.abi),
+            if (@hasDecl(builtin, "zig_backend")) @tagName(builtin.zig_backend) else "stage unknown",
         });
         // zig fmt: on
         os.exit(0);
@@ -62,11 +59,8 @@ pub fn main() anyerror!void {
     defer gpa.free(content);
 
     while (true) {
-        // try stdout.print("{d}\n", .{stack.items.len});
-        // std.time.sleep(1000000000);
         var c = content[pc];
         //og("pc={d} {c}\n", .{ pc, c });
-
         pc += 1;
         if (disabled) {
             if (c == '[') {
@@ -101,69 +95,57 @@ fn dumpRibbon() anyerror!void {
     try stdout.print("\n", .{});
 }
 
-fn opNoop(_: u8) anyerror!void {
+fn opNoop(_: u8) !void {
     // try stdout.print("\n noop {c}\n", .{c});
 }
-
-fn opNotImplemented(_: u8) anyerror!void {
+fn opNotImplemented(_: u8) !void {
     @panic("not implemented");
 }
-
-fn opPlus(_: u8) anyerror!void {
+fn opPlus(_: u8) !void {
     log("opPlus ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     ribbon[ptr] +%= 1;
 }
-fn opMinus(_: u8) anyerror!void {
+fn opMinus(_: u8) !void {
     log("opMinus ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     ribbon[ptr] -%= 1;
 }
-fn opPtrPlus(_: u8) anyerror!void {
+fn opPtrPlus(_: u8) !void {
     log("opPtrPlus ptr={d}\n", .{ptr});
     ptr +%= 1;
     ptr = ptr % 30000;
 }
-fn opPtrMinus(_: u8) anyerror!void {
+fn opPtrMinus(_: u8) !void {
     log("opPtrMinus ptr={d}\n", .{ptr});
     ptr -%= 1;
     ptr = ptr % 30000;
 }
-fn opPutChar(_: u8) anyerror!void {
+fn opPutChar(_: u8) !void {
     log("opPutChar 0x{x}\n", .{ribbon[ptr]});
-
     try stdout.print("{c}", .{ribbon[ptr]});
 }
-fn opGetChar(_: u8) anyerror!void {
+fn opGetChar(_: u8) !void {
     try stdout.print("?", .{});
     var buf: [1024]u8 = undefined;
-
     if (try stdin.readUntilDelimiterOrEof(buf[0..], '\n')) |_| {
         ribbon[ptr] = buf[0];
     }
     // const cchar = libc.getchar();
     // ribbon[ptr] = @intCast(u8, cchar);
 }
-
-fn opPush(_: u8) anyerror!void {
+fn opPush(_: u8) !void {
     if (ribbon[ptr] == 0) {
         log("\n je disable\n", .{});
         disabled = true;
     } else {
         stack.push(pc - 1);
-        log("\n je stack {d} ({d})\n", .{ pc - 1, stack.len() });
-        //stack.dump();
     }
 }
-
-fn opPop(_: u8) anyerror!void {
-    if (ribbon[ptr] != 0) {
-        var p = stack.pop();
-        pc = p;
-        log("\n j ai pop {d} ({d})\n", .{ pc, stack.len() });
-    }
+fn opPop(_: u8) !void {
+    var p = stack.pop();
+    pc = p;
 }
 
 inline fn log(comptime format: []const u8, args: anytype) void {
-    //stdout.print(format, args) catch unreachable;
     _ = format;
     _ = args;
 }
