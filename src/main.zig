@@ -82,7 +82,6 @@ pub fn main() anyerror!void {
     }
     // try dumpRibbon();
 }
-
 fn dumpRibbon() anyerror!void {
     var count: usize = 0;
     for (ribbon) |v, i| {
@@ -94,7 +93,6 @@ fn dumpRibbon() anyerror!void {
     }
     try stdout.print("\n", .{});
 }
-
 fn opNoop(_: u8) !void {
     // try stdout.print("\n noop {c}\n", .{c});
 }
@@ -141,11 +139,12 @@ fn opPush(_: u8) !void {
     }
 }
 fn opPop(_: u8) !void {
-    var p = stack.pop();
-    pc = p;
+    pc = stack.pop();
 }
 
 inline fn log(comptime format: []const u8, args: anytype) void {
+    // stdout.print(format, args) catch unreachable;
+
     _ = format;
     _ = args;
 }
