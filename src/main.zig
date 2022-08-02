@@ -39,7 +39,7 @@ pub fn main() anyerror!void {
 
     if (args.len < 2) {
         // zig fmt: off
-        std.debug.print("$0 <file.bf> -- ({s}-{s}-{s} [{s}])\n", .{ 
+        std.debug.print("$0 <file.bf> -- ({s}-{s}-{s} [{s}])\n", .{
             @tagName(builtin.cpu.arch),
             @tagName(builtin.os.tag),
             @tagName(builtin.abi),
