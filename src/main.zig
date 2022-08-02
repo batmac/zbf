@@ -3,9 +3,8 @@ const std = @import("std");
 const fs = std.fs;
 const os = std.os;
 const mem = std.mem;
-const stdin = std.io.getStdIn().reader();
 const stdout = std.io.getStdOut().writer();
-// const libc = @cImport(@cInclude("stdio.h"));
+const libc = @cImport(@cInclude("stdio.h"));
 const stk = @import("stack.zig");
 
 const OpFn = fn (u8) anyerror!void;
@@ -35,39 +34,37 @@ pub fn main() anyerror!void {
     var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.debug.assert(!general_purpose_allocator.deinit());
     const gpa = general_purpose_allocator.allocator();
-    const proc_args = try std.process.argsAlloc(gpa);
-    defer gpa.free(proc_args);
-    const args = proc_args[1..];
+    const args = try std.process.argsAlloc(gpa);
+    defer gpa.free(args);
 
-    if (args.len == 0) {
+    if (args.len < 2) {
         // zig fmt: off
         std.debug.print("$0 <file.bf> -- ({s}-{s}-{s} [{s}])\n", .{ 
             @tagName(builtin.cpu.arch),
             @tagName(builtin.os.tag),
             @tagName(builtin.abi),
-            if (@hasDecl(builtin, "zig_backend")) @tagName(builtin.zig_backend) else "stage unknown",
+            if (@hasDecl(builtin, "zig_backend")) @tagName(builtin.zig_backend) else "stageUnknown",
         });
         // zig fmt: on
         os.exit(0);
     }
 
-    const fname = args[0];
+    const fname = args[1];
     var f = try fs.cwd().openFile(fname, fs.File.OpenFlags{ .mode = .read_only });
-    defer f.close();
-
     const content = try f.readToEndAlloc(gpa, 1024 * 1024);
+    f.close();
     defer gpa.free(content);
 
     while (true) {
         var c = content[pc];
-        //og("pc={d} {c}\n", .{ pc, c });
+        log("pc={d} {c}\n", .{ pc, c });
         pc += 1;
         if (disabled) {
             if (c == '[') {
                 depth += 1;
             } else if (c == ']') {
                 if (depth == 0) {
-                    log("\n je enable\n", .{});
+                    log("  enabling\n", .{});
                     disabled = false;
                 } else {
                     depth -= 1;
@@ -80,21 +77,10 @@ pub fn main() anyerror!void {
             break;
         }
     }
-    // try dumpRibbon();
 }
-fn dumpRibbon() anyerror!void {
-    var count: usize = 0;
-    for (ribbon) |v, i| {
-        try stdout.print("{d}: {d} \n", .{ i, v });
-        count += 1;
-        if (count % 10 == 0) {
-            try stdout.print("\n", .{});
-        }
-    }
-    try stdout.print("\n", .{});
-}
-fn opNoop(_: u8) !void {
-    // try stdout.print("\n noop {c}\n", .{c});
+
+fn opNoop(c: u8) !void {
+    log("opNoop {c}\n", .{c});
 }
 fn opNotImplemented(_: u8) !void {
     @panic("not implemented");
@@ -118,33 +104,31 @@ fn opPtrMinus(_: u8) !void {
     ptr = ptr % 30000;
 }
 fn opPutChar(_: u8) !void {
-    log("opPutChar 0x{x}\n", .{ribbon[ptr]});
+    log("opPutChar ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     try stdout.print("{c}", .{ribbon[ptr]});
 }
 fn opGetChar(_: u8) !void {
-    try stdout.print("?", .{});
-    var buf: [1024]u8 = undefined;
-    if (try stdin.readUntilDelimiterOrEof(buf[0..], '\n')) |_| {
-        ribbon[ptr] = buf[0];
-    }
-    // const cchar = libc.getchar();
-    // ribbon[ptr] = @intCast(u8, cchar);
+    log("opGetChar {d}\n", .{ptr});
+    const cchar = libc.getchar();
+    ribbon[ptr] = @intCast(u8, cchar);
 }
 fn opPush(_: u8) !void {
+    log("opPush ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
     if (ribbon[ptr] == 0) {
-        log("\n je disable\n", .{});
+        log("  disabling\n", .{});
         disabled = true;
     } else {
+        log("  pushing\n", .{pc - 1});
         stack.push(pc - 1);
     }
 }
 fn opPop(_: u8) !void {
+    log("opPop\n", .{});
     pc = stack.pop();
 }
 
 inline fn log(comptime format: []const u8, args: anytype) void {
     // stdout.print(format, args) catch unreachable;
-
     _ = format;
     _ = args;
 }

@@ -1,1 +1,4 @@
 zig-*/
+*.dSYM
+*.old
+a.out
