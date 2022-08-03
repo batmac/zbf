@@ -23,4 +23,5 @@ jobs:
       - run: zig env
       - run: zig build
       - run: zig build test
+      - run: ./zig-out/bin/zbf
       - run: ./zig-out/bin/zbf examples/sierpinski.b
