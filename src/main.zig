@@ -4,7 +4,6 @@ const fs = std.fs;
 const os = std.os;
 const mem = std.mem;
 const stdout = std.io.getStdOut().writer();
-const libc = @cImport(@cInclude("stdio.h"));
 const stk = @import("stack.zig");
 
 const OpFn = fn (u8) anyerror!void;
@@ -109,7 +108,8 @@ fn opPutChar(_: u8) !void {
 }
 fn opGetChar(_: u8) !void {
     log("opGetChar {d}\n", .{ptr});
-    const cchar = libc.getchar();
+    const cchar = std.io.getStdIn().reader().readByte() catch |err|
+        if (err == error.EndOfStream) os.exit(0) else return err;
     ribbon[ptr] = @intCast(u8, cchar);
 }
 fn opPush(_: u8) !void {
