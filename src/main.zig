@@ -6,7 +6,7 @@ const mem = std.mem;
 const stdout = std.io.getStdOut().writer();
 const stk = @import("stack.zig");
 
-const OpFn = fn (u8) anyerror!void;
+const OpFn = *const fn (u8) anyerror!void;
 
 const jumpTable = init: {
     var initial_value = [_]OpFn{opNoop} ** 256;
