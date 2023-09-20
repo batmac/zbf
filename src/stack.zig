@@ -13,7 +13,7 @@ pub fn Stack(comptime T: type, comptime capacity: usize) type {
             return Self{};
         }
         pub inline fn deinit(self: *Self) void {
-            for (self.items[0..]) |_, i| {
+            for (self.items[0..], 0..) |_, i| {
                 self.items[i] = 0;
             }
             self.sp = 0;
@@ -41,7 +41,7 @@ pub fn Stack(comptime T: type, comptime capacity: usize) type {
         }
 
         pub inline fn dump(self: *Self) void {
-            for (self.items[0..self.sp]) |v, i| {
+            for (self.items[0..self.sp], 0..) |v, i| {
                 std.log.info("{d}: {d}", .{ i, v });
             }
         }

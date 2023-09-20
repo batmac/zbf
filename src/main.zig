@@ -31,10 +31,10 @@ pub fn main() anyerror!void {
     // try stdout.print("{s}\n", .{@typeName(@TypeOf(ribbon))});
     // const gpa = std.heap.c_allocator;
     var general_purpose_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(!general_purpose_allocator.deinit());
+    defer _ = general_purpose_allocator.deinit();
     const gpa = general_purpose_allocator.allocator();
     const args = try std.process.argsAlloc(gpa);
-    defer gpa.free(args);
+    defer std.process.argsFree(gpa, args);
 
     if (args.len < 2) {
         // zig fmt: off
@@ -110,7 +110,7 @@ fn opGetChar(_: u8) !void {
     log("opGetChar {d}\n", .{ptr});
     const cchar = std.io.getStdIn().reader().readByte() catch |err|
         if (err == error.EndOfStream) os.exit(0) else return err;
-    ribbon[ptr] = @intCast(u8, cchar);
+    ribbon[ptr] = @intCast(cchar);
 }
 fn opPush(_: u8) !void {
     log("opPush ptr={d} value={d}\n", .{ ptr, ribbon[ptr] });
